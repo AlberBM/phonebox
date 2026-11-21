@@ -197,6 +197,8 @@ window.PhoneBoxLocaleData = Object.assign(window.PhoneBoxLocaleData || {}, {
       "s.discord.hint": "discord.com/developers/applications 에서 애플리케이션을 만들고, 리디렉션을 추가합니다 http://127.0.0.1 OAuth2 아래에 클라이언트 ID와 비밀번호를 여기에 복사합니다. Discord 승인을 요청합니다. PhoneBox 한 번. 그것은 로그인을 거부하는 경우, 응용 프로그램의 App Testers 아래에 계정을 추가합니다. 단계별: docs/DISCORD.md.",
       "s.discord.clientId": "클라이언트 ID",
       "s.discord.clientSecret": "비밀 클라이언트",
+      "s.discord.allowControl": "단축키와 사용자 위젯이 Discord 위젯 없이 Discord를 제어하도록 허용",
+      "s.discord.allowControlHint": "에이전트의 /api/discord 동작(마이크 끄기, 헤드셋 끄기, 입력 모드, 나가기, 참가)에 적용됩니다. 끔: 사용 설정된 페이지에 제어가 켜진 Discord 위젯이 있을 때만 작동합니다. 켬: 위젯 없이도 작동합니다. 어느 경우든 위젯뿐 아니라 에이전트를 호출할 수 있는 모든 것이 사용할 수 있습니다: 페어링된 휴대폰(USB 또는 Wi-Fi)과 이 컴퓨터의 프로그램.",
       "w.steam.turnOn": "설정 › 일반에서 Steam 연결",
       "w.steam.stale": "Steam 새로 고침 실패; 이전 데이터 표시",
       "w.steam.onlineCount": "{online} 온라인 · {total} 친구",

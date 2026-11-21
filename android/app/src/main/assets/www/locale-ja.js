@@ -197,6 +197,8 @@ window.PhoneBoxLocaleData = Object.assign(window.PhoneBoxLocaleData || {}, {
       "s.discord.hint": "discord.com/developers/applications でアプリケーションを作成し、OAuth2 の下に http://127.0.0.1 をリダイレクトして、クライアント ID と秘密鍵をコピーします。Discord は PhoneBox を一度認証するように求めます。ログインが拒否されると、アプリケーションの App Testers にあなたのアカウントを追加します。ステップごとに: docs/DISCORD.md.",
       "s.discord.clientId": "クライアント ID",
       "s.discord.clientSecret": "クライアントシークレット",
+      "s.discord.allowControl": "ショートカットやカスタムウィジェットが Discord ウィジェットなしで Discord を操作できるようにする",
+      "s.discord.allowControlHint": "エージェントの /api/discord 操作（ミュート、スピーカーミュート、入力モード、退出、参加）に適用されます。オフ: 有効なページに、操作を許可した Discord ウィジェットがある間だけ使えます。オン: ウィジェットがなくても使えます。どちらの場合も、ウィジェットだけでなくエージェントを呼び出せるものはすべて使えます: ペアリングしたスマホ（USB または Wi-Fi）とこのコンピューターのプログラム。",
       "w.steam.turnOn": "設定 › 一般の中で Steam を接続",
       "w.steam.stale": "Steam の更新に失敗しました。古いデータを表示しています",
       "w.steam.onlineCount": "{online} オンラインで {total} 友達だ",

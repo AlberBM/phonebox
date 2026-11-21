@@ -197,6 +197,8 @@ window.PhoneBoxLocaleData = Object.assign(window.PhoneBoxLocaleData || {}, {
       "s.discord.hint": "สร้างโปรแกรมที่ discord.com/developers/applications, เพิ่มการนำทาง http://127.0.0.1 ภายใต้ OAuth2 และคัดลอกหมายเลขไคลเอนต์และความลับของมันที่นี่ Discord จะขอให้คุณยอมรับ PhoneBox ครั้งหนึ่ง หากไม่ยอมรับการล็อกอิน เพิ่มบัญชีของคุณในส่วน App Testers ของโปรแกรมนี้ ขั้นตอนต่อไป: docs/DISCORD.md.",
       "s.discord.clientId": "หมายเลขไคลเอนต์",
       "s.discord.clientSecret": "คลาวด์ลับ",
+      "s.discord.allowControl": "ให้ทางลัดและวิดเจ็ตที่สร้างเองควบคุม Discord ได้ โดยไม่ต้องมีวิดเจ็ต Discord",
+      "s.discord.allowControlHint": "สำหรับคำสั่ง /api/discord ของเอเจนต์: ปิดไมค์ ปิดเสียง โหมดอินพุต ออก และเข้าร่วม ปิด: ใช้ได้เฉพาะเมื่อมีวิดเจ็ต Discord ที่เปิดการควบคุมอยู่บนหน้าที่เปิดใช้งาน เปิด: ใช้ได้โดยไม่ต้องมีวิดเจ็ต ทั้งสองกรณี ทุกอย่างที่เรียกเอเจนต์ได้จะใช้คำสั่งเหล่านี้ได้ ไม่ใช่แค่วิดเจ็ต: โทรศัพท์ที่จับคู่ไว้ (USB หรือ Wi-Fi) และโปรแกรมบนคอมพิวเตอร์นี้",
       "w.steam.turnOn": "เชื่อมต่อ Steam ในตัวตั้งค่า › ทั่วไป",
       "w.steam.stale": "การปรับปรุงข้อมูล Steam ล้มเหลว แสดงข้อมูลเก่า",
       "w.steam.onlineCount": "{online} อยู่บนเว็บ {total} เพื่อน",

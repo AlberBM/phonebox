@@ -197,6 +197,8 @@ window.PhoneBoxLocaleData = Object.assign(window.PhoneBoxLocaleData || {}, {
       "s.discord.hint": "discord.com/developers/applications पर एक अनुप्रयोग बनाएँ, OAuth2 के अंतर्गत http://127.0.0.1 रीडायरेक्ट जोड़ें और इसका क्लाइंट आईडी और गुप्त यहाँ नक़ल करें. Discord आपको PhoneBox को एक बार स्वीकृत करने के लिए पूछता है. यदि यह लॉगइन अस्वीकार करता है, अनुप्रयोग के App Testers में अपना खाता जोड़ें. चरणबद्ध: docs/DISCORD.md.",
       "s.discord.clientId": "क्लाएंट आईडी",
       "s.discord.clientSecret": "गुप्त क्लाएंट",
+      "s.discord.allowControl": "शॉर्टकट और कस्टम विजेट को Discord विजेट के बिना Discord नियंत्रित करने दें",
+      "s.discord.allowControlHint": "एजेंट की /api/discord क्रियाओं के लिए: म्यूट, डेफ़न, इनपुट मोड, छोड़ना और जुड़ना। बंद: ये तभी काम करती हैं जब किसी चालू पेज पर नियंत्रण चालू वाला Discord विजेट हो। चालू: ये विजेट के बिना भी काम करती हैं। दोनों स्थितियों में, केवल विजेट ही नहीं, एजेंट को कॉल कर सकने वाली हर चीज़ इन्हें इस्तेमाल कर सकती है: जोड़ा गया फ़ोन (USB या Wi-Fi) और इस कंप्यूटर के प्रोग्राम।",
       "w.steam.turnOn": "विन्यास › सामान्य में Steam को जोड़ें",
       "w.steam.stale": "Steam ताज़ा करना असफल; पुराने डाटा दिखा रहा है",
       "w.steam.onlineCount": "{online} ऑनलाइन {total} दोस्त",

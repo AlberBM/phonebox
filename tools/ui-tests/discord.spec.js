@@ -127,6 +127,26 @@ test('push to talk without a key in Discord shows a warning', async ({ page }) =
   await expect(page.locator('.dc-warn')).toHaveCount(0);
 });
 
+async function showWith(page, discord, widget) {
+  await page.goto('/panel/');
+  await page.evaluate(([discord, widget]) => {
+    localStorage.clear();
+    localStorage.setItem('pb-demo-config', JSON.stringify({ night: { enabled: false }, rules: [], shortcuts: [], discord,
+      pages: [{ id: 'dc', title: 'Discord', enabled: true, widgets: [widget] }] }));
+  }, [discord, widget]);
+  await page.reload();
+}
+
+test('without the widget option the buttons stay off, unless Allow Discord control is on', async ({ page }) => {
+  const plain = { ...DISCORD, options: {} };
+  await showWith(page, { allowControl: false }, plain);
+  await expect(page.locator('.dc-btn.mute')).toBeDisabled();
+  await showWith(page, { allowControl: true }, plain);
+  await expect(page.locator('.dc-btn.mute')).toBeEnabled();
+  await page.locator('.dc-btn.mute').click();
+  await expect(page.locator('.dc-btn.mute')).toHaveClass(/\bon\b/);
+});
+
 test('the ring moves without redrawing the widget, so avatars and server icons do not flash', async ({ page }) => {
   await show(page);
   const ada = page.locator('.dc-member', { hasText: 'Ada' });

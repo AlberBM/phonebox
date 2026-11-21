@@ -197,6 +197,8 @@ window.PhoneBoxLocaleData = Object.assign(window.PhoneBoxLocaleData || {}, {
       "s.discord.hint": "Buat aplikasi di discord.com/developers/applications, tambahkan redirect http://127.0.0.1 di bawah OAuth2, dan salin ID kliennya dan rahasianya disini. Discord meminta Anda untuk menyetujui PhoneBox sekali. Jika menolak login, tambahkan akun Anda di bawah App Testers aplikasi ini. Langkah demi langkah: docs/DISCORD.md.",
       "s.discord.clientId": "ID Klien",
       "s.discord.clientSecret": "Klien rahasia",
+      "s.discord.allowControl": "Izinkan pintasan dan widget kustom mengendalikan Discord, tanpa widget Discord",
+      "s.discord.allowControlHint": "Untuk aksi /api/discord milik agen: bisukan, tulikan, mode masukan, keluar, dan bergabung. Mati: hanya berfungsi selama ada widget Discord dengan kontrol aktif di halaman yang diaktifkan. Nyala: berfungsi tanpa widget. Dalam kedua keadaan, apa pun yang bisa memanggil agen dapat memakainya, bukan hanya widget: ponsel yang dipasangkan (USB atau Wi-Fi) dan program di komputer ini.",
       "w.steam.turnOn": "Sambungkan Steam di Pengaturan › Umum",
       "w.steam.stale": "Steam refresh gagal; menampilkan data lama",
       "w.steam.onlineCount": "{online} online · {total} teman",

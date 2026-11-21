@@ -197,6 +197,8 @@ window.PhoneBoxLocaleData = Object.assign(window.PhoneBoxLocaleData || {}, {
       "s.discord.hint": "إنشاء تطبيق على discord.com/developers/applications، وإضافة الإعادة http://127.0.0.1 تحت OAuth2، ونسخ هوية العميل وسرية هنا. Discord يطلب منك الموافقة PhoneBox مرة واحدة. إذا رفضت الدخول، أضف حسابك تحت التطبيق App Testers. خطوة بخطوة: docs/DISCORD.md.",
       "s.discord.clientId": "هوية العميل",
       "s.discord.clientSecret": "العميل السري",
+      "s.discord.allowControl": "السماح للاختصارات والأدوات المخصصة بالتحكم في Discord دون أداة Discord",
+      "s.discord.allowControlHint": "لإجراءات /api/discord في الوكيل: كتم الميكروفون والصوت ووضع الإدخال والمغادرة والانضمام. معطّل: تعمل فقط ما دامت هناك أداة Discord مفعّل فيها التحكم في صفحة مفعّلة. مفعّل: تعمل من دونها. وفي الحالتين يمكن لكل ما يستطيع استدعاء الوكيل استخدامها، لا الأداة وحدها: الهاتف المقترن (USB أو Wi-Fi) والبرامج على هذا الكمبيوتر.",
       "w.steam.turnOn": "اتصال Steam في الإعدادات › عام",
       "w.steam.stale": "فشل تجديد Steam؛ عرض بيانات أقدم",
       "w.steam.onlineCount": "{online} على الإنترنت {total} أصدقاء",

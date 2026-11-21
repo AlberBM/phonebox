@@ -13,14 +13,14 @@ public sealed class DiscordTests : IDisposable
 
     public void Dispose() { try { File.Delete(_configPath); } catch { } }
 
-    private DiscordMonitor Monitor(bool? control, bool pageEnabled = true, bool? notifications = null, bool discordEnabled = true)
+    private DiscordMonitor Monitor(bool? control, bool pageEnabled = true, bool? notifications = null, bool discordEnabled = true, bool allowControl = false)
     {
         var options = new Dictionary<string, object>();
         if (control is { } c) options["control"] = c;
         if (notifications is { } n) options["notifications"] = n;
         File.WriteAllText(_configPath, JsonSerializer.Serialize(new
         {
-            discord = new { enabled = discordEnabled, clientId = "1", clientSecret = "s" },
+            discord = new { enabled = discordEnabled, clientId = "1", clientSecret = "s", allowControl },
             // At least one page must stay enabled (the config repairs an all-disabled list), so a second page holds no widgets.
             pages = new[]
             {
@@ -62,6 +62,46 @@ public sealed class DiscordTests : IDisposable
     {
         Monitor(control: true);
         Assert.True(DiscordMonitor.ControlAllowed(Config()));
+    }
+
+    // ---- the global "allow control" switch (for shortcuts and custom widgets) ----
+
+    [Fact]
+    public async Task The_global_switch_allows_control_without_a_widget_option()
+    {
+        var monitor = Monitor(control: null, allowControl: true);
+        Assert.True(DiscordMonitor.ControlAllowed(Config()));
+        // allowed, so the press gets as far as needing a connection
+        Assert.Equal("Discord is not connected", await monitor.ActAsync("mute", null));
+    }
+
+    [Fact]
+    public async Task The_global_switch_also_works_with_the_widget_on_a_hidden_page()
+    {
+        var monitor = Monitor(control: false, pageEnabled: false, allowControl: true);
+        Assert.Equal("Discord is not connected", await monitor.ActAsync("leave", null));
+    }
+
+    [Fact]
+    public void The_global_switch_is_off_by_default()
+    {
+        File.WriteAllText(_configPath, """{"discord":{"enabled":true,"clientId":"1","clientSecret":"s"}}""");
+        var cfg = Config();
+        Assert.False(cfg.Discord.AllowControl);
+        Assert.False(DiscordMonitor.ControlAllowed(cfg));
+    }
+
+    [Theory]
+    [InlineData("config.default.json")]
+    [InlineData("config.default.linux.json")]
+    [InlineData("config.default.macos.json")]
+    public void The_default_settings_ship_with_the_switch_off(string file)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, file);
+        File.Copy(path, _configPath, overwrite: true);
+        var cfg = Config();
+        Assert.False(cfg.Discord.AllowControl);
+        Assert.Contains("\"allowControl\": false", File.ReadAllText(path));
     }
 
     [Fact]

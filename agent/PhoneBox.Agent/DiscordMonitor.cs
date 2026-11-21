@@ -540,12 +540,12 @@ public sealed partial class DiscordMonitor(ConfigStore config, ILogger<DiscordMo
     public async Task<string?> ActAsync(string action, string? channel)
     {
         if (!ControlAllowed(config.Get()))
-            return "controlling Discord is turned off in the widget's settings";
+            return "controlling Discord is turned off in the widget's settings and in Settings › General › Discord";
         await _act.WaitAsync();
         try
         {
             // Checked again here: the widget's option or page may have been switched off while this press was queued.
-            if (!ControlAllowed(config.Get())) return "controlling Discord is turned off in the widget's settings";
+            if (!ControlAllowed(config.Get())) return "controlling Discord is turned off in the widget's settings and in Settings › General › Discord";
             var s = _snap;
             if (!s.Connected) return "Discord is not connected";
             switch (action)
@@ -572,9 +572,13 @@ public sealed partial class DiscordMonitor(ConfigStore config, ILogger<DiscordMo
         finally { _act.Release(); }
     }
 
-    /// <summary>Control needs a Discord widget with the control option on, on a page that is enabled.</summary>
+    /// <summary>
+    /// Control needs a Discord widget with the control option on, on a page that is enabled, or the global
+    /// <see cref="DiscordConfig.AllowControl"/> switch (off by default) for shortcuts and custom widgets.
+    /// </summary>
     public static bool ControlAllowed(AgentConfig cfg) =>
-        cfg.Widgets(enabledPagesOnly: true).Any(w => w.Type == "discord" && w.Bool("control") == true);
+        cfg.Discord.AllowControl
+        || cfg.Widgets(enabledPagesOnly: true).Any(w => w.Type == "discord" && w.Bool("control") == true);
 
     // Discord answers a settings change with the new settings; take the state from that, not from the next poll.
     internal void ApplyVoice(JsonNode? vs)

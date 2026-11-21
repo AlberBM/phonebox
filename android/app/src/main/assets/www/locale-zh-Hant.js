@@ -197,6 +197,8 @@ window.PhoneBoxLocaleData = Object.assign(window.PhoneBoxLocaleData || {}, {
       "s.discord.hint": "在 discord.com/developers/applications 創建一個應用程式 ， 加上重定向 http://127.0.0.1 複製客戶端ID和密碼 Discord 請你批准 PhoneBox 如果它拒絕登錄, 添加您的帳戶下應用程式的App測試者. 一步一步: docs/DISCORD.md.",
       "s.discord.clientId": "客戶端ID",
       "s.discord.clientSecret": "秘密客戶端",
+      "s.discord.allowControl": "允許捷徑和自訂小工具控制 Discord（不需要 Discord 小工具）",
+      "s.discord.allowControlHint": "適用於代理程式的 /api/discord 動作：靜音、關閉聲音、輸入模式、離開和加入。關閉：只有已啟用的頁面上有開啟控制的 Discord 小工具時才可用。開啟：不需要小工具也可用。無論哪種情況，凡是能呼叫代理程式的都可以使用，不只是小工具：已配對的手機（USB 或 Wi-Fi）和這台電腦上的程式。",
       "w.steam.turnOn": "連結 Steam 設定",
       "w.steam.stale": "Steam 刷新失敗;顯示舊的資料",
       "w.steam.onlineCount": "{online} 網上 {total} 朋友",

@@ -197,6 +197,8 @@ window.PhoneBoxLocaleData = Object.assign(window.PhoneBoxLocaleData || {}, {
       "s.discord.hint": "Vytvořte aplikaci na discord.com/developers/applications, přidejte přesměrování http://127.0.0.1 pod OAuth2 a zkopírujte zde ID klienta a tajné heslo. Discord vás požádá o schválení PhoneBox jednou. Pokud odmítne přihlášení, přidejte svůj účet pod App Testers aplikace. Krok za krokem: docs/DISCORD.md.",
       "s.discord.clientId": "ID klienta",
       "s.discord.clientSecret": "Tajný klient",
+      "s.discord.allowControl": "Povolit zkratkám a vlastním widgetům ovládat Discord i bez widgetu Discord",
+      "s.discord.allowControlHint": "Pro akce /api/discord agenta: ztlumení, vypnutí zvuku, režim vstupu, odchod a připojení. Vypnuto: fungují, jen když je na zapnuté stránce widget Discord se zapnutým ovládáním. Zapnuto: fungují i bez něj. V obou případech je může použít vše, co může volat agenta, nejen widget: spárovaný telefon (USB nebo Wi-Fi) a programy na tomto počítači.",
       "w.steam.turnOn": "Připojení Steam v Nastavení › Obecné",
       "w.steam.stale": "Steam obnovení selhalo; zobrazují se starší data",
       "w.steam.onlineCount": "{online} online · {total} přátelé",

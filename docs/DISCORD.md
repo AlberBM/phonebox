@@ -42,12 +42,32 @@ Add a **Discord** widget to a page in the editor. Options:
 | Notifications | Show recent Discord notifications. PhoneBox only asks Discord for them, and only sends them to the phone, while a widget with this option on is on an enabled page |
 | Control | Allow mute, deafen, switching between voice activity and push to talk, leave and join from the phone. **Off by default** |
 
-Without **Control** the widget only displays state. Joining works only for voice channels the agent already listed.
+With both the widget's **Control** option and `discord.allowControl` (below) off, the widget only displays state. Joining
+works only for voice channels the agent already listed.
 
 The input mode button (🗣️ voice activity, ✋ push to talk) switches Discord's **Input Mode** and keeps your push-to-talk
 key, release delay and sensitivity as they are. When push to talk is on but no key is set in Discord, nobody can hear
 you; the widget then shows a warning, and one more tap switches back to voice activity. It uses the voice permission
 PhoneBox already asks for, so no new approval in Discord is needed.
+
+### Controlling Discord without the widget
+
+Shortcuts, scripts and custom widgets can use the same actions as the widget's buttons:
+`POST /api/discord/mute`, `/deafen`, `/inputmode`, `/leave` and `/join?channel=<id>` (an id from `GET /api/discord`). By
+default they work only while a Discord widget with **Control** on is on an enabled page. To use them without one, turn on
+**Let shortcuts and custom widgets control Discord** in **Settings › General › Discord** (`discord.allowControl`, off
+by default).
+
+Who can reach these actions:
+
+| From | How |
+|---|---|
+| Programs on this computer | `http://127.0.0.1:8765/api/discord/...` (the agent listens on the loopback address only) |
+| The paired phone over USB | through the app's `adb reverse` tunnel, like the rest of the panel |
+| The paired phone over Wi-Fi | `/api/discord` is on the Wi-Fi allow-list (`Lan.cs`), over TLS pinned to the paired certificate, with the paired key |
+
+The switch doesn't add a path or a new way in: it only stops requiring the widget, and any of the callers above can then
+act, not only the widget. With it off, nothing changes from before.
 
 ## What is requested
 
