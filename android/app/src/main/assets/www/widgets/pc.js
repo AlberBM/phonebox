@@ -171,9 +171,12 @@ W.discord = {
       const s = data.snapshot;
       if (!s.connected) { box.replaceChildren(h('div', 'w-title', en('Discord')), h('div', 'empty', s.error || t('panel.connecting'))); return; }
       const ctl = data.control;
+      // Push to talk counts as "on" for the input mode button: it is the mode where you are silent until you press a key.
+      const ptt = s.inputMode === 'PUSH_TO_TALK';
       const btn = (cls, label, on, action) => {
         const b = labelled(h('button', 'dc-btn ' + cls + (on ? ' on' : '') + (busy === action ? ' busy' : ''), label),
-          t({ mute: on ? 'w.a.unmuteMic' : 'w.a.muteMic', deafen: on ? 'w.a.undeafen' : 'w.a.deafen', leave: 'w.a.leave' }[action]));
+          t({ mute: on ? 'w.a.unmuteMic' : 'w.a.muteMic', deafen: on ? 'w.a.undeafen' : 'w.a.deafen', leave: 'w.a.leave',
+            inputmode: on ? 'w.a.useVoiceActivity' : 'w.a.usePushToTalk' }[action]));
         if (ctl && !busy) b.addEventListener('click', () => act(action)); else b.disabled = true;
         return b;
       };
@@ -181,7 +184,10 @@ W.discord = {
         h('span', 'dc-where', s.channelName ? `${s.channelName}` : t('w.discord.notInChannel')),
         s.channelKind ? h('span', 'dc-kind', s.channelKind) : null,
         btn('mute', emo(s.muted ? '🔇' : '🎙️'), s.muted, 'mute'), btn('deaf', emo(s.deafened ? '🔕' : '🎧'), s.deafened, 'deafen'),
+        s.inputMode ? btn('mode', emo(ptt ? '✋' : '🗣️'), ptt, 'inputmode') : null,
         s.channelId ? btn('leave', emo('📞'), false, 'leave') : null)];
+      // Push to talk without a key in Discord: nobody hears you, and nothing else on screen says so.
+      if (ptt && !s.pttKey) kids.push(h('div', 'dc-warn', t('w.discord.pttNoKey')));
       if (s.channelId && s.members.length) {
         kids.push(h('div', 'dc-members', ...s.members.map((m) => {
           const chip = h('span', 'dc-member' + (m.deafened ? ' deaf' : m.muted ? ' muted' : '') + (m.speaking ? ' speaking' : ''), ico(m.avatar && img('user', m.id, m.avatar), m.name), rich((m.deafened ? '🔕 ' : m.muted ? '🔇 ' : '') + m.name));

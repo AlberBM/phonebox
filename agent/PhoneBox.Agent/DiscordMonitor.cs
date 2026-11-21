@@ -10,9 +10,12 @@ namespace PhoneBox.Agent;
 public sealed record DiscordMember(string Id, string Name, bool Muted, bool Deafened, string? Avatar, bool Speaking = false);
 public sealed record DiscordChannel(string Id, string Name, string? Guild, string? GuildId, string? GuildIcon);
 public sealed record DiscordNotification(long Ts, string Title, string Body);
+/// <param name="InputMode">"VOICE_ACTIVITY" or "PUSH_TO_TALK" (Discord's input mode); null until Discord reported it.</param>
+/// <param name="PttKey">Whether a push-to-talk key is set in Discord: with push to talk on and no key, nobody hears you.</param>
 public sealed record DiscordSnapshot(bool Connected, string? Error, string? User, bool Muted, bool Deafened,
     string? ChannelId, string? ChannelName, string? ChannelKind, IReadOnlyList<DiscordMember> Members,
-    IReadOnlyList<DiscordChannel> Channels, IReadOnlyList<DiscordNotification> Notifications);
+    IReadOnlyList<DiscordChannel> Channels, IReadOnlyList<DiscordNotification> Notifications,
+    string? InputMode = null, bool PttKey = false);
 
 /// <summary>
 /// Discord through the desktop app's local IPC (the same one rich presence uses: a named pipe on Windows, a socket on
@@ -213,9 +216,11 @@ public sealed partial class DiscordMonitor(ConfigStore config, ILogger<DiscordMo
                     v?["voice_state"]?["deaf"]?.GetValue<bool>() == true || v?["voice_state"]?["self_deaf"]?.GetValue<bool>() == true,
                     v?["user"]?["avatar"]?.GetValue<string>())).ToList() ?? [];
                 var kind = sel?["type"]?.GetValue<int>() switch { 1 => "call", 3 => "group call", 2 => "voice", 13 => "stage", _ => sel is null ? null : "voice" };
+                var (inputMode, pttKey) = InputModeOf(vs);
                 PublishPoll(rev, vs?["mute"]?.GetValue<bool>() == true, vs?["deaf"]?.GetValue<bool>() == true,
                     new DiscordSnapshot(true, null, user, false, false,
-                        sel?["id"]?.GetValue<string>(), sel is null ? null : (sel["name"]?.GetValue<string>() ?? (kind == "call" ? "Direct call" : "Call")), kind, members, channels, []));
+                        sel?["id"]?.GetValue<string>(), sel is null ? null : (sel["name"]?.GetValue<string>() ?? (kind == "call" ? "Direct call" : "Call")), kind, members, channels, [],
+                        inputMode, pttKey));
                 await Task.Delay(2000, ct);
             }
         }
@@ -502,20 +507,36 @@ public sealed partial class DiscordMonitor(ConfigStore config, ILogger<DiscordMo
     private int _voiceRev; // bumped each time a button press publishes new mute/deafen state
     private bool _closed;  // guarded by _lock: the current connection's ReadLoop has ended
 
-    /// <summary>Publishes a poll. A button press that finished since the poll read <paramref name="rev"/> is newer than what the poll saw, so it keeps its mute/deafen state.</summary>
+    /// <summary>Publishes a poll. A button press that finished since the poll read <paramref name="rev"/> is newer than what the poll saw, so it keeps its mute/deafen/input mode state.</summary>
     internal void PublishPoll(int rev, bool muted, bool deafened, DiscordSnapshot snapshot)
     {
         lock (_lock)
         {
             if (_closed) return; // the connection this poll came from has ended (ReadLoop)
             var stale = rev != _voiceRev;
-            _snap = snapshot with { Muted = stale ? _snap.Muted : muted, Deafened = stale ? _snap.Deafened : deafened };
+            _snap = stale
+                ? snapshot with { Muted = _snap.Muted, Deafened = _snap.Deafened, InputMode = _snap.InputMode, PttKey = _snap.PttKey }
+                : snapshot with { Muted = muted, Deafened = deafened };
         }
+    }
+
+    /// <summary>
+    /// Discord's input mode from GET_VOICE_SETTINGS / SET_VOICE_SETTINGS (<c>mode.type</c>), and whether a push-to-talk
+    /// key is set (<c>mode.shortcut</c> has keys). Anything other than the two known modes counts as unknown (null).
+    /// </summary>
+    internal static (string? Mode, bool PttKey) InputModeOf(JsonNode? vs)
+    {
+        if (vs?["mode"] is not JsonObject mode) return (null, false);
+        var type = JsonStr(mode["type"]);
+        return (type is "VOICE_ACTIVITY" or "PUSH_TO_TALK" ? type : null, mode["shortcut"] is JsonArray keys && keys.Count > 0);
     }
 
     internal int VoiceRevision => Volatile.Read(ref _voiceRev);
 
-    /// <summary>The widget's buttons: mute, deafen, leave, join (a voice channel id from the list the agent already sent).</summary>
+    /// <summary>
+    /// The widget's buttons: mute, deafen, inputmode (switch between voice activity and push to talk), leave, join (a
+    /// voice channel id from the list the agent already sent).
+    /// </summary>
     public async Task<string?> ActAsync(string action, string? channel)
     {
         if (!ControlAllowed(config.Get()))
@@ -531,6 +552,14 @@ public sealed partial class DiscordMonitor(ConfigStore config, ILogger<DiscordMo
             {
                 case "mute": ApplyVoice(await Request("SET_VOICE_SETTINGS", new JsonObject { ["mute"] = !s.Muted }, null, CancellationToken.None)); break;
                 case "deafen": ApplyVoice(await Request("SET_VOICE_SETTINGS", new JsonObject { ["deaf"] = !s.Deafened }, null, CancellationToken.None)); break;
+                // Only the mode's type is sent, so Discord keeps the push-to-talk key, delay and sensitivity as they are.
+                case "inputmode" when s.InputMode is not null:
+                    ApplyVoice(await Request("SET_VOICE_SETTINGS", new JsonObject
+                    {
+                        ["mode"] = new JsonObject { ["type"] = s.InputMode == "PUSH_TO_TALK" ? "VOICE_ACTIVITY" : "PUSH_TO_TALK" },
+                    }, null, CancellationToken.None));
+                    break;
+                case "inputmode": return "Discord has not reported its input mode yet";
                 case "leave": await Request("SELECT_VOICE_CHANNEL", new JsonObject { ["channel_id"] = null }, null, CancellationToken.None); break;
                 case "join" when !string.IsNullOrEmpty(channel) && s.Channels.Any(c => c.Id == channel):
                     await Request("SELECT_VOICE_CHANNEL", new JsonObject { ["channel_id"] = channel, ["force"] = true }, null, CancellationToken.None); break;
@@ -551,11 +580,18 @@ public sealed partial class DiscordMonitor(ConfigStore config, ILogger<DiscordMo
     internal void ApplyVoice(JsonNode? vs)
     {
         if (vs is null) return;
+        var (mode, pttKey) = InputModeOf(vs);
         lock (_lock)
         {
             var s = _snap;
             _voiceRev++;
-            _snap = s with { Muted = vs["mute"]?.GetValue<bool>() ?? s.Muted, Deafened = vs["deaf"]?.GetValue<bool>() ?? s.Deafened };
+            _snap = s with
+            {
+                Muted = vs["mute"]?.GetValue<bool>() ?? s.Muted,
+                Deafened = vs["deaf"]?.GetValue<bool>() ?? s.Deafened,
+                InputMode = mode ?? s.InputMode,
+                PttKey = mode is null ? s.PttKey : pttKey,
+            };
         }
     }
 

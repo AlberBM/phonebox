@@ -818,6 +818,8 @@ html.beat-4 .obs-pill.on .obs-led { box-shadow: 0 0 34px rgba(239, 68, 68, .9); 
 .dc-btn:disabled { opacity: .7; }
 .dc-btn:active { transform: scale(.95); }
 .dc-btn.busy, .dc-chan.busy { opacity: .55; }
+.dc-btn.mode.on { background: rgba(245, 158, 11, .2); border-color: rgba(245, 158, 11, .5); }
+.dc-warn { font-size: 12px; color: #fbbf24; padding: 4px 8px; border-left: 3px solid #f59e0b; background: rgba(245, 158, 11, .08); border-radius: 6px; }
 .dc-members { display: flex; flex-wrap: wrap; gap: 5px; }
 .dc-member { font-size: 12px; padding: 3px 8px; border-radius: 999px; background: rgba(88, 101, 242, .22); }
 .dc-member.muted, .dc-member.deaf { background: rgba(255, 255, 255, .07); color: var(--muted); }

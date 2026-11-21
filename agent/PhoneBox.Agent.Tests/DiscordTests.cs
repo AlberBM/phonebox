@@ -101,6 +101,60 @@ public sealed class DiscordTests : IDisposable
         Assert.True(monitor.Snapshot().Deafened);
     }
 
+    // ---- input mode (voice activity / push to talk) ----
+
+    [Theory]
+    [InlineData("""{"mode":{"type":"VOICE_ACTIVITY","shortcut":[]}}""", "VOICE_ACTIVITY", false)]
+    [InlineData("""{"mode":{"type":"PUSH_TO_TALK","shortcut":[{"type":0,"code":192,"name":"`"}]}}""", "PUSH_TO_TALK", true)]
+    [InlineData("""{"mode":{"type":"PUSH_TO_TALK"}}""", "PUSH_TO_TALK", false)]
+    [InlineData("""{"mode":{"type":"SOMETHING_NEW","shortcut":[]}}""", null, false)]
+    [InlineData("""{"mute":true}""", null, false)]
+    [InlineData("""{"mode":{"type":7}}""", null, false)]
+    public void The_input_mode_and_ptt_key_are_read_from_the_voice_settings(string json, string? mode, bool pttKey)
+    {
+        var (m, key) = DiscordMonitor.InputModeOf(JsonNode.Parse(json));
+        Assert.Equal(mode, m);
+        Assert.Equal(pttKey, key);
+    }
+
+    [Fact]
+    public void Switching_the_input_mode_shows_at_once_and_an_older_poll_does_not_undo_it()
+    {
+        var monitor = Monitor(true);
+        monitor.PublishPoll(monitor.VoiceRevision, false, false, Polled() with { InputMode = "VOICE_ACTIVITY", PttKey = true });
+        var rev = monitor.VoiceRevision;                                           // a poll reads voice activity here...
+        monitor.ApplyVoice(JsonNode.Parse("""{"mode":{"type":"PUSH_TO_TALK","shortcut":[{"type":0,"code":192}]}}"""));
+        Assert.Equal("PUSH_TO_TALK", monitor.Snapshot().InputMode);
+        monitor.PublishPoll(rev, false, false, Polled() with { InputMode = "VOICE_ACTIVITY", PttKey = true }); // ...and finishes late
+        Assert.Equal("PUSH_TO_TALK", monitor.Snapshot().InputMode);
+        Assert.True(monitor.Snapshot().PttKey);
+    }
+
+    [Fact]
+    public void A_mute_answer_without_a_mode_keeps_the_input_mode()
+    {
+        var monitor = Monitor(true);
+        monitor.PublishPoll(monitor.VoiceRevision, false, false, Polled() with { InputMode = "PUSH_TO_TALK", PttKey = false });
+        monitor.ApplyVoice(JsonNode.Parse("""{"mute":true}"""));
+        Assert.Equal("PUSH_TO_TALK", monitor.Snapshot().InputMode);
+        Assert.False(monitor.Snapshot().PttKey);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(false)]
+    public async Task Switching_the_input_mode_needs_control_like_the_other_buttons(bool? control)
+    {
+        var error = await Monitor(control).ActAsync("inputmode", null);
+        Assert.Contains("turned off", error);
+    }
+
+    [Fact]
+    public async Task Switching_the_input_mode_needs_a_connection()
+    {
+        Assert.Equal("Discord is not connected", await Monitor(true).ActAsync("inputmode", null));
+    }
+
     // ---- reconnecting ----
 
     [Fact]

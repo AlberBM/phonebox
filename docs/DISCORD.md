@@ -40,9 +40,14 @@ Add a **Discord** widget to a page in the editor. Options:
 |---|---|
 | Channels | Show your servers as tiles; tap one to see and join its voice channels |
 | Notifications | Show recent Discord notifications. PhoneBox only asks Discord for them, and only sends them to the phone, while a widget with this option on is on an enabled page |
-| Control | Allow mute, deafen, leave and join from the phone. **Off by default** |
+| Control | Allow mute, deafen, switching between voice activity and push to talk, leave and join from the phone. **Off by default** |
 
 Without **Control** the widget only displays state. Joining works only for voice channels the agent already listed.
+
+The input mode button (🗣️ voice activity, ✋ push to talk) switches Discord's **Input Mode** and keeps your push-to-talk
+key, release delay and sensitivity as they are. When push to talk is on but no key is set in Discord, nobody can hear
+you; the widget then shows a warning, and one more tap switches back to voice activity. It uses the voice permission
+PhoneBox already asks for, so no new approval in Discord is needed.
 
 ## What is requested
 

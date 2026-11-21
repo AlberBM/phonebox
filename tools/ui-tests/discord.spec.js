@@ -84,6 +84,49 @@ test('a Discord card that is not showing in a Smart Stack does not ask', async (
   expect(await requestsIn(page, 3000)).toBe(0);
 });
 
+test('the input mode button switches between voice activity and push to talk', async ({ page }) => {
+  const errors = []; page.on('pageerror', (e) => errors.push(String(e)));
+  await show(page);
+  const mode = page.locator('.dc-btn.mode');
+  await expect(mode).toBeVisible();
+  await expect(mode).not.toHaveClass(/\bon\b/);
+  await expect(mode).toHaveAttribute('aria-label', 'Switch to push to talk');
+  await mode.click();
+  await expect(mode).toHaveClass(/\bon\b/);
+  await expect(mode).toHaveAttribute('aria-label', 'Switch to voice activity');
+  await expect(page.locator('.dc-warn')).toHaveCount(0); // the demo has a push-to-talk key
+  await mode.click();
+  await expect(mode).not.toHaveClass(/\bon\b/);
+  expect(errors).toEqual([]);
+});
+
+test('push to talk without a key in Discord shows a warning', async ({ page }) => {
+  // the agent reports pttKey: false when Discord has no push-to-talk key; the demo always has one, so drop it here
+  await page.addInitScript(() => {
+    const wrap = () => {
+      const f = window.fetch;
+      if (!f || f.__nokey) return;
+      const g = async (input, init) => {
+        const r = await f(input, init);
+        const url = typeof input === 'string' ? input : input.url;
+        if (!url.endsWith('/api/discord')) return r;
+        const j = await r.clone().json();
+        if (j.snapshot) j.snapshot.pttKey = false;
+        return new Response(JSON.stringify(j), { headers: { 'Content-Type': 'application/json' } });
+      };
+      g.__nokey = true;
+      window.fetch = g;
+    };
+    setInterval(wrap, 10);
+  });
+  await show(page);
+  await expect(page.locator('.dc-warn')).toHaveCount(0);
+  await page.locator('.dc-btn.mode').click();
+  await expect(page.locator('.dc-warn')).toHaveText(/no key is set in Discord/);
+  await page.locator('.dc-btn.mode').click();
+  await expect(page.locator('.dc-warn')).toHaveCount(0);
+});
+
 test('the ring moves without redrawing the widget, so avatars and server icons do not flash', async ({ page }) => {
   await show(page);
   const ada = page.locator('.dc-member', { hasText: 'Ada' });

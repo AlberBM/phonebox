@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+**Widgets**
+- Discord: a button switches Discord between **voice activity** and **push to talk**, keeping your push-to-talk key,
+  delay and sensitivity. When push to talk is on but Discord has no key set (so nobody hears you), the widget says so.
+  It follows the widget's **Control** option like the other buttons and uses the voice scope PhoneBox already asks
+  for (#356, [AlberBM](https://github.com/AlberBM)).
+
 **Agent**
 - Phone app updates: a phone that cannot take a streamed install (`splice failed: EINVAL`, seen with Android 15 on a
   3.10 kernel) is tried once more without streaming, and a phone whose app was updated another way no longer keeps
