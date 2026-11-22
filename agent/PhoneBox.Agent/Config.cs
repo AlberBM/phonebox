@@ -415,6 +415,12 @@ public sealed class DiscordConfig
     /// enabled page, allows them.
     /// </summary>
     public bool AllowControl { get; set; }
+    /// <summary>
+    /// The Discord widget's chat (read-only) and new-message dots: asks Discord for the <c>messages.read</c> scope (one
+    /// more approval in Discord) and sends message text to the phone. Off by default. Message text stays in the agent's
+    /// memory only, for as long as the connection to Discord lasts.
+    /// </summary>
+    public bool Chat { get; set; }
 }
 
 public sealed class SteamConfig

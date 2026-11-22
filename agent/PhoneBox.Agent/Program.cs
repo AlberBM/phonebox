@@ -696,7 +696,19 @@ app.MapGet("/api/discord", (DiscordMonitor dc, ConfigStore cfg) => Results.Json(
     enabled = cfg.Get().Discord.Enabled,
     snapshot = dc.Snapshot(),
     control = DiscordMonitor.ControlAllowed(cfg.Get()),
+    widgetControl = DiscordMonitor.WidgetControl(cfg.Get()),
+    chat = DiscordMonitor.ChatWanted(cfg.Get()),
+    chatUnread = dc.ChatUnread(),
 }));
+// Chat (read-only, Settings › General › Discord › chat, off by default): the chosen channel's last messages, the servers
+// or, for the phone's channel picker (?picker=true), no messages but the text channels of ?guild=. Only while the setting
+// is on and a Discord widget is on an enabled page; message text comes from memory only.
+app.MapGet("/api/discord/chat", async (string? guild, bool? picker, DiscordMonitor dc, CancellationToken ct) =>
+    Results.Json(await dc.ChatAsync(guild, picker == true, ct)));
+app.MapPost("/api/discord/chat/choose", (string? channel, DiscordMonitor dc) =>
+    dc.ChatChoose(channel) is { } error ? Results.BadRequest(new { error }) : Results.Ok(new { ok = true }));
+app.MapPost("/api/discord/chat/open", async (DiscordMonitor dc) =>
+    await dc.ChatOpenAsync() is { } error ? Results.BadRequest(new { error }) : Results.Ok(new { ok = true }));
 // Ids go in the query string: the Android app lets image requests through by exact path (READ_ONLY_IMAGES).
 app.MapGet("/api/discord/img", async (string kind, string id, string hash, DiscordMonitor dc, CancellationToken ct) =>
     await dc.ImageAsync(kind, id, hash, ct) is { } img
