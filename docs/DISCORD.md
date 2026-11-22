@@ -69,6 +69,21 @@ Who can reach these actions:
 The switch doesn't add a path or a new way in: it only stops requiring the widget, and any of the callers above can then
 act, not only the widget. With it off, nothing changes from before.
 
+### Favourites and who is in a voice channel
+
+Tap **★ Favourites** above the servers, star the servers you use (☆ next to a server) and, inside a big server, the
+voice channels you want (☆ next to a channel), then **Done**. From then on the widget shows only those servers, and a
+server with starred channels shows only those channels (plus the one you are in). With no favourites, every server
+shows as before. The favourites are saved in the widget's settings on the computer, so each Discord widget has its own.
+
+For favourites the agent also reads **who is in the voice channel**, every 10 seconds and for at most 20 channels: the
+starred channels first, then the channels of favourite servers without a starred one. Their names show under the channel,
+and the server shows how many people are in voice **in the channels that were read**, which may not be all of them. Other
+channels are not asked, and none are while the widget's **Channels** option is off.
+
+The phone only sends the id of a server or channel the agent itself listed, and the agent changes nothing but that
+widget's two favourite lists (`favGuilds`, `favChannels`).
+
 ## What is requested
 
 The login asks for these Discord permissions, all of them on your own account and only through the local app:

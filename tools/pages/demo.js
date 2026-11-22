@@ -541,6 +541,23 @@
       store.set('pb-demo-version', cfgVersion() + 1);
       return json({ version: cfgVersion() });
     }
+    if (path.startsWith('/api/widget/') && path.endsWith('/discord-favorite') && method === 'POST') {
+      const parts = path.split('/');
+      const c = await config();
+      const pg = (c.pages || []).find((p) => p.id === decodeURIComponent(parts[3]));
+      const w = pg && (pg.widgets || []).find((x) => x.id === decodeURIComponent(parts[4]));
+      if (!w || w.type !== 'discord') return json({ error: 'option not allowed' }, 400);
+      if (!/^\d+$/.test(q.get('version') || '')) return json({ error: 'version is missing' }, 400);
+      if (+q.get('version') !== cfgVersion()) return json({ error: 'changed' }, 409); // over newer settings, as in the agent
+      const key = q.get('kind') === 'guild' ? 'favGuilds' : q.get('kind') === 'channel' ? 'favChannels' : null;
+      if (!key) return json({ error: 'kind must be guild or channel' }, 400);
+      const id = q.get('id') || '';
+      const list = (w.options?.[key] || []).filter((x) => x !== id);
+      w.options = { ...(w.options || {}), [key]: q.get('on') === 'false' ? list : [...list, id] };
+      store.set('pb-demo-config', c);
+      store.set('pb-demo-version', cfgVersion() + 1);
+      return json({ version: cfgVersion() });
+    }
     if (path === '/api/volume' && method === 'POST') {
       // the agent answers with the new volume state (AudioSnapshot)
       const op = q.get('op'), level = q.has('level') ? +q.get('level') : null;
@@ -598,11 +615,16 @@
     if (path === '/api/obs') { const c = await config(); return json({ ...obsState(), enabled: c.obs?.enabled !== false, control: widgets(c).some((w) => w.type === 'obs' && w.options?.control === true) }); }
     if (path === '/api/discord') {
       const c = await config();
+      // who is in Lounge: only when a widget that shows channels wants it, as the agent does (DiscordFavorites.WantedRooms)
+      const lounge = shownWidgets(c).some((w) => w.type === 'discord' && w.options?.channels !== false
+        && ((w.options?.favChannels || []).includes('c3') || ((w.options?.favGuilds || []).includes('g1') && !(w.options?.favChannels || []).includes('c1'))));
       return json({ enabled: true, control: c.discord?.allowControl === true || widgets(c).some((w) => w.type === 'discord' && w.options?.control === true), snapshot: {
         connected: true, error: null, user: 'demo', muted: dc.muted, deafened: dc.deaf, channelId: dc.in, channelName: dc.in ? 'Game night' : null, channelKind: dc.in ? 'voice' : null,
         inputMode: dc.ptt ? 'PUSH_TO_TALK' : 'VOICE_ACTIVITY', pttKey: true,
         members: dc.in ? [{ id: '1', name: 'demo', muted: dc.muted, deafened: dc.deaf }, { id: '2', name: 'Ada', muted: false, deafened: false, speaking: Math.floor(now() / 1500) % 2 === 0 }, { id: '3', name: 'Linus', muted: true, deafened: false }] : [],
-        channels: [{ id: 'c1', name: 'Game night', guild: 'Friends' }, { id: 'c2', name: 'Stand-up', guild: 'Work' }],
+        channels: [{ id: 'c1', name: 'Game night', guild: 'Friends', guildId: 'g1' }, { id: 'c3', name: 'Lounge', guild: 'Friends', guildId: 'g1',
+          people: lounge ? [{ id: '4', name: 'Grace', muted: false, deafened: false }, { id: '5', name: 'Alan', muted: true, deafened: false }] : null },
+          { id: 'c2', name: 'Stand-up', guild: 'Work', guildId: 'g2' }],
         notifications: [{ ts: dc.noteAt, title: 'Ada', body: 'are you joining?' }] } });
     }
     if (path === '/api/steam') return json({ enabled: true, snapshot: {

@@ -462,6 +462,23 @@ app.MapPost("/api/widget/{pageId}/{widgetId}/note", (string pageId, string widge
     };
 });
 
+// The phone's other narrow write: a Discord widget's favourite servers and voice channels. Only an id the agent itself
+// reported, only into that widget's two lists (DiscordFavorites). Query string only, like the note above.
+app.MapPost("/api/widget/{pageId}/{widgetId}/discord-favorite", (string pageId, string widgetId, string? kind, string? id, bool? on, string? version, ConfigStore cfg, DiscordMonitor dc) =>
+{
+    // always over the settings the phone has loaded, never over whatever is current
+    if (!long.TryParse(version, out var expected)) return Results.BadRequest(new { error = "version is missing" });
+    DiscordFavorites.Result r;
+    lock (IconCommit) r = DiscordFavorites.Apply(cfg, pageId, widgetId, kind, id, on ?? true, dc.Knows, expected);
+    return r.Status switch
+    {
+        200 => Results.Ok(new { version = r.Version }),
+        404 => Results.NotFound(new { error = r.Error }),
+        409 => Results.Json(new { error = r.Error }, statusCode: StatusCodes.Status409Conflict),
+        _ => Results.BadRequest(new { error = r.Error }),
+    };
+});
+
 app.MapPost("/api/shortcuts/test", async (HttpRequest req, ConfigStore cfg, PushStore push, AudioControl audio, ILogger<Program> log) =>
 {
     if (req.ContentType?.StartsWith("application/json") != true) return Results.StatusCode(415);

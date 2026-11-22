@@ -8,7 +8,9 @@ using System.Text.Json.Nodes;
 namespace PhoneBox.Agent;
 
 public sealed record DiscordMember(string Id, string Name, bool Muted, bool Deafened, string? Avatar, bool Speaking = false);
-public sealed record DiscordChannel(string Id, string Name, string? Guild, string? GuildId, string? GuildIcon);
+/// <param name="People">Who is in the voice channel: only read for favourites (see <see cref="DiscordFavorites"/>), null otherwise.</param>
+public sealed record DiscordChannel(string Id, string Name, string? Guild, string? GuildId, string? GuildIcon,
+    IReadOnlyList<DiscordMember>? People = null);
 public sealed record DiscordNotification(long Ts, string Title, string Body);
 /// <param name="InputMode">"VOICE_ACTIVITY" or "PUSH_TO_TALK" (Discord's input mode); null until Discord reported it.</param>
 /// <param name="PttKey">Whether a push-to-talk key is set in Discord: with push to talk on and no key, nobody hears you.</param>
@@ -169,6 +171,7 @@ public sealed partial class DiscordMonitor(ConfigStore config, ILogger<DiscordMo
         _io = io;
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(ct);
         var reader = Task.Run(() => ReadLoop(io, stop.Token), CancellationToken.None);
+        Task<Dictionary<string, IReadOnlyList<DiscordMember>>>? roomsTask = null; // reads beside the loop, so a slow answer never holds up mute or deafen
         try
         {
             _snap = Empty("Waiting for you to approve PhoneBox in Discord…");
@@ -179,6 +182,8 @@ public sealed partial class DiscordMonitor(ConfigStore config, ILogger<DiscordMo
             _guildChannels.Clear();
             var channelsAt = DateTime.MinValue;
             var channelsEvery = TimeSpan.FromSeconds(60);
+            var rooms = new Dictionary<string, IReadOnlyList<DiscordMember>>(); // favourite voice channels: who is in them
+            long roomsAt = 0; // when the last read was started
             string? speakingFor = null;
             long speakingRetryAt = 0; // after a failed (un)subscribe: when to set the channel's subscriptions up again
             while (!ct.IsCancellationRequested && !reader.IsCompleted && config.Get().Discord.Enabled)
@@ -197,7 +202,21 @@ public sealed partial class DiscordMonitor(ConfigStore config, ILogger<DiscordMo
                     channelsEvery = await RefreshVoiceChannels(ct) ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(10);
                     channelsAt = DateTime.UtcNow;
                 }
-                var channels = _guildChannels.Values.SelectMany(v => v).ToList();
+                var known = _guildChannels.Values.SelectMany(v => v).ToList();
+                var wanted = DiscordFavorites.WantedRooms(config.Get(), known);
+                if (roomsTask is { IsCompleted: true })
+                {
+                    if (roomsTask.IsCompletedSuccessfully) rooms = await roomsTask;
+                    roomsTask = null;
+                }
+                if (wanted.Count > 0 && roomsTask is null && (roomsAt == 0 || Environment.TickCount64 - roomsAt > 10_000))
+                {
+                    roomsAt = Environment.TickCount64;
+                    roomsTask = ReadRooms(wanted, stop.Token, stillWanted: id => DiscordFavorites.WantedRooms(config.Get(), known).Any(c => c.Id == id));
+                }
+                // only what is wanted right now: a favourite removed since the read started shows nobody any more
+                var show = wanted.Select(c => c.Id).ToHashSet();
+                List<DiscordChannel> channels = [.. known.Select(c => show.Contains(c.Id) && rooms.TryGetValue(c.Id, out var p) ? c with { People = p } : c)];
                 var rev = Volatile.Read(ref _voiceRev);
                 var vs = await Request("GET_VOICE_SETTINGS", null, null, ct);
                 var sel = await Request("GET_SELECTED_VOICE_CHANNEL", null, null, ct);
@@ -209,12 +228,7 @@ public sealed partial class DiscordMonitor(ConfigStore config, ILogger<DiscordMo
                     speakingRetryAt = await FollowSpeaking(speakingFor, selId, ct) ? 0 : Environment.TickCount64 + 30_000;
                     speakingFor = selId;
                 }
-                var members = sel?["voice_states"]?.AsArray().Select(v => new DiscordMember(
-                    v?["user"]?["id"]?.GetValue<string>() ?? "",
-                    v?["nick"]?.GetValue<string>() ?? v?["user"]?["global_name"]?.GetValue<string>() ?? v?["user"]?["username"]?.GetValue<string>() ?? "?",
-                    v?["voice_state"]?["mute"]?.GetValue<bool>() == true || v?["voice_state"]?["self_mute"]?.GetValue<bool>() == true,
-                    v?["voice_state"]?["deaf"]?.GetValue<bool>() == true || v?["voice_state"]?["self_deaf"]?.GetValue<bool>() == true,
-                    v?["user"]?["avatar"]?.GetValue<string>())).ToList() ?? [];
+                var members = MembersOf(sel?["voice_states"]);
                 var kind = sel?["type"]?.GetValue<int>() switch { 1 => "call", 3 => "group call", 2 => "voice", 13 => "stage", _ => sel is null ? null : "voice" };
                 var (inputMode, pttKey) = InputModeOf(vs);
                 PublishPoll(rev, vs?["mute"]?.GetValue<bool>() == true, vs?["deaf"]?.GetValue<bool>() == true,
@@ -231,6 +245,7 @@ public sealed partial class DiscordMonitor(ConfigStore config, ILogger<DiscordMo
             SpeakingChannel = null;
             stop.Cancel();
             try { await reader; } catch { }
+            if (roomsTask is not null) try { await roomsTask; } catch { }
             lock (_lock)
             {
                 _notes.Clear();
@@ -358,14 +373,15 @@ public sealed partial class DiscordMonitor(ConfigStore config, ILogger<DiscordMo
     private readonly Lock _imageLock = new();
     private static readonly HttpClient ImageHttp = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-    /// <summary>Only icons and avatars the agent itself reported (a server's icon, a member of your current call) are served.</summary>
+    /// <summary>Only icons and avatars the agent itself reported (a server's icon, a member of your current call or of a favourite voice channel) are served.</summary>
     internal bool IsKnownImage(string kind, string id, string hash)
     {
         var s = _snap;
         return kind switch
         {
             "guild" => s.Channels.Any(c => c.GuildId == id && c.GuildIcon == hash),
-            "user" => s.Members.Any(m => m.Id == id && m.Avatar == hash),
+            "user" => s.Members.Any(m => m.Id == id && m.Avatar == hash)
+                || s.Channels.Any(c => c.People?.Any(m => m.Id == id && m.Avatar == hash) == true),
             _ => false,
         };
     }
@@ -436,6 +452,54 @@ public sealed partial class DiscordMonitor(ConfigStore config, ILogger<DiscordMo
     }
 
     private static string? JsonStr(JsonNode? node) => node is JsonValue v && v.TryGetValue<string>(out var s) ? s : null;
+
+    /// <summary>The people in a voice channel, from its <c>voice_states</c> (GET_SELECTED_VOICE_CHANNEL / GET_CHANNEL).</summary>
+    internal static List<DiscordMember> MembersOf(JsonNode? voiceStates) =>
+        voiceStates is JsonArray a
+            ? [.. a.Select(v => new DiscordMember(
+                JsonStr(v?["user"]?["id"]) ?? "",
+                JsonStr(v?["nick"]) ?? JsonStr(v?["user"]?["global_name"]) ?? JsonStr(v?["user"]?["username"]) ?? "?",
+                v?["voice_state"]?["mute"]?.GetValueKind() == JsonValueKind.True || v?["voice_state"]?["self_mute"]?.GetValueKind() == JsonValueKind.True,
+                v?["voice_state"]?["deaf"]?.GetValueKind() == JsonValueKind.True || v?["voice_state"]?["self_deaf"]?.GetValueKind() == JsonValueKind.True,
+                JsonStr(v?["user"]?["avatar"])))]
+            : [];
+
+    private static readonly TimeSpan RoomWait = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Who is in the favourite voice channels. Only channels with people are kept; one Discord refuses is left out until
+    /// the next pass, and when Discord is slow to answer the pass ends there instead of asking for the others too. Each
+    /// one is asked for only while it is still wanted: the widget's page or option may be turned off during a pass.
+    /// </summary>
+    internal async Task<Dictionary<string, IReadOnlyList<DiscordMember>>> ReadRooms(IReadOnlyList<DiscordChannel> wanted, CancellationToken ct, TimeSpan? wait = null, Func<string, bool>? stillWanted = null)
+    {
+        var rooms = new Dictionary<string, IReadOnlyList<DiscordMember>>();
+        foreach (var c in wanted)
+        {
+            if (ct.IsCancellationRequested) break;
+            if (stillWanted?.Invoke(c.Id) == false) continue;
+            try
+            {
+                var people = MembersOf((await Request("GET_CHANNEL", new JsonObject { ["channel_id"] = c.Id }, null, ct, wait ?? RoomWait))?["voice_states"]);
+                if (people.Count > 0) rooms[c.Id] = people;
+            }
+            catch (TimeoutException) { break; }
+            catch (Exception ex) when (ex is not OperationCanceledException) { log.LogDebug("discord: people in {Channel}: {Msg}", c.Id, ex.Message); }
+        }
+        return rooms;
+    }
+
+    /// <summary>Whether the agent reported this server ("guild") or voice channel ("channel"): favourites can only be ids from its own list.</summary>
+    public bool Knows(string kind, string id)
+    {
+        var s = _snap;
+        return kind switch
+        {
+            "guild" => s.Channels.Any(c => c.GuildId == id),
+            "channel" => s.Channels.Any(c => c.Id == id),
+            _ => false,
+        };
+    }
 
     internal async Task ReadLoop(Stream io, CancellationToken ct)
     {
